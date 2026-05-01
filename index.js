@@ -1,20 +1,28 @@
-import express from "express"
-const app = express()
-const PORT = 2000
-import locationRouter from './controller/location.js'
+import 'dotenv/config';
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import connectDB from './services/db.js';
+import { handleLocationUpdate, getAllLocations } from './controller/location.js';
 
-app.use(express.json())
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-app.get('/', (req, res) => {
-    res.json({
-        status: `Server is running`
-    })
-    .status(200)
-    console.log("Working")
-})
+// Connect to MongoDB
+connectDB();
 
-app.use('/api', locationRouter)
+app.use(cors());
+app.use(express.json());
+app.set('socketio', io);
 
-app.listen(PORT , ()=> {
-    console.log("Hello bhai Server")
-})
+// ROUTE 1: Mobile dev calls this to get the 100 scrapped locations
+app.get('/api/all-locations', getAllLocations);
+
+// ROUTE 2: Mobile dev calls this every time a user moves
+app.post('/api/user-location', handleLocationUpdate);
+
+server.listen(3000, () => {
+    console.log("🚀 Server running on port 3000");
+});

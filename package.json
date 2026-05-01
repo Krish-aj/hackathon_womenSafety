@@ -20,8 +20,12 @@
   },
   "homepage": "https://github.com/Krish-aj/hackathon_womenSafety#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
-    "express": "^5.2.1"
+    "csv-parser": "^3.2.0",
+    "express": "^5.2.1",
+    "mongoose": "^9.6.1",
+    "socket.io": "^4.8.3"
   }
 }

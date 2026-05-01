@@ -1,15 +1,36 @@
-import express from 'express'
-import { getAddress } from '../services/getLocation.js'
-const router = express.Router()
+import { Location } from '../models/Location.js';
 
-router.post('/location', (req, res) => {
-    const {lat, log} = req.body
-    const data = getAddress(lat, log)
-    if(data)
-        return res.json(data).status(200)
-    else
-        return res.status(400)
+// 1. Get ALL locations (For your mobile dev friend's initial load)
+export const getAllLocations = async (req, res) => {
+    try {
+        const locations = await Location.find({}, 'lat lng score address');
+        res.status(200).json(locations);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching data" });
+    }
+};
 
-})
+// 2. Handle specific User Update (Broadcasting to Frontend Map)
+export const handleLocationUpdate = async (req, res) => {
+    const { userId, lat, lng } = req.body;
 
-export default router
+    try {
+        const io = req.app.get('socketio');
+        
+        const userData = {
+            userId,
+            lat,
+            lng,
+            type: "USER_LIVE_LOCATION"
+        };
+
+        // Send to frontend dashboard immediately via Socket.io
+        if (io) {
+            io.emit('userMoved', userData);
+        }
+
+        res.status(200).json({ message: "Location broadcasted to map" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
