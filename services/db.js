@@ -1,12 +1,13 @@
+// services/db.js  —  FIXED
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
     try {
-        // Replace with your local or Atlas URI
-        const conn = await mongoose.connect(process.env.MONGO_URI);
-        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    } catch (error) {
-        console.error(`❌ Error: ${error.message}`);
+        const uri = "mongodb://admin:pass@localhost:27017/women_safety?authSource=admin";
+        await mongoose.connect(uri);
+        console.log("✅ MongoDB Connected.");
+    } catch (err) {
+        console.error("❌ MongoDB connection failed:", err.message);
         process.exit(1);
     }
 };

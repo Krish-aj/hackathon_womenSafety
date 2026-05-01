@@ -1,36 +1,59 @@
+// controller/location.js
+
 import { Location } from '../models/Location.js';
 
-// 1. Get ALL locations (For your mobile dev friend's initial load)
 export const getAllLocations = async (req, res) => {
     try {
-        const locations = await Location.find({}, 'lat lng score address');
-        res.status(200).json(locations);
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching data" });
+        const locations = await Location.find({},
+            {_id:0,address:1,lat:1,lng:1,score:1});
+
+        res.json(locations);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };
 
-// 2. Handle specific User Update (Broadcasting to Frontend Map)
 export const handleLocationUpdate = async (req, res) => {
-    const { userId, lat, lng } = req.body;
-
     try {
-        const io = req.app.get('socketio');
-        
-        const userData = {
-            userId,
-            lat,
-            lng,
-            type: "USER_LIVE_LOCATION"
-        };
+        const { userId, lat, lng } = req.body;
 
-        // Send to frontend dashboard immediately via Socket.io
-        if (io) {
-            io.emit('userMoved', userData);
+        if (!userId || isNaN(lat) || isNaN(lng)) {
+            return res.status(400).json({ error: 'userId, lat, and lng are required' });
         }
 
-        res.status(200).json({ message: "Location broadcasted to map" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        // Find the closest high-risk location from seeded data
+        const locations = await Location.find({});
+        let nearestRisk = null;
+        let minDist = Infinity;
+
+        for (const loc of locations) {
+            const dist = Math.sqrt(
+                Math.pow(loc.lat - lat, 2) +
+                Math.pow(loc.lng - lng, 2)
+            );
+            if (dist < minDist) {
+                minDist = dist;
+                nearestRisk = loc;
+            }
+        }
+
+        const payload = {
+            userId,
+            currentLocation: { lat, lng },
+            nearestRiskZone: nearestRisk,
+            distanceToRisk: minDist,
+            alert: nearestRisk?.score > 7   // tweak threshold to your score range
+                ? `⚠️ High risk area nearby: ${nearestRisk.address}`
+                : null,
+        };
+
+        // Broadcast to all connected dashboard/guardian clients
+        const io = req.app.get('socketio');
+        io.emit('location-update', payload);
+
+        res.json({ success: true, ...payload });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };
